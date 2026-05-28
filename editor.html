@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Code Editor - MCPACK Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 1.5em;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        
+        .btn-home {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn-home:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-save {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: #45a049;
+        }
+        
+        .btn-clear {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #ff5252;
+        }
+        
+        .btn-export {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #0b7dda;
+        }
+        
+        .main-container {
+            display: flex;
+            width: 100%;
+            margin-top: 60px;
+            height: calc(100vh - 60px);
+        }
+        
+        .blocks-panel {
+            width: 250px;
+            background: #2d2d2d;
+            border-right: 1px solid #3d3d3d;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .blocks-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-top: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .block-btn {
+            padding: 10px;
+            background: #3d3d3d;
+            border: 2px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+            cursor: grab;
+            user-select: none;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        
+        .block-btn:hover {
+            background: #4d4d4d;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .block-btn:active {
+            cursor: grabbing;
+        }
+        
+        .canvas-area {
+            flex: 1;
+            background: #1e1e1e;
+            border: 2px dashed #555;
+            margin: 15px;
+            border-radius: 8px;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+        
+        .canvas-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+        
+        .code-block {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 8px;
+            min-width: 200px;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            border: 2px solid #764ba2;
+            color: white;
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .code-block:hover {
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .code-block.if-block {
+            border-left: 4px solid #4caf50;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        }
+        
+        .code-block.loop-block {
+            border-left: 4px solid #ff9800;
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .code-block.event-block {
+            border-left: 4px solid #2196f3;
+            background: linear-gradient(135deg, #2196f3 0%, #0b7dda 100%);
+        }
+        
+        .code-block.action-block {
+            border-left: 4px solid #e91e63;
+            background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+        }
+        
+        .code-block.variable-block {
+            border-left: 4px solid #9c27b0;
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+        }
+        
+        .block-content {
+            flex: 1;
+        }
+        
+        .block-title {
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        
+        .block-param {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .remove-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+        
+        .remove-btn:hover {
+            background: #ff6b6b;
+        }
+        
+        .code-output {
+            width: 300px;
+            background: #2d2d2d;
+            border-left: 1px solid #3d3d3d;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+        
+        .code-output-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        .code-preview {
+            background: #1e1e1e;
+            border: 1px solid #3d3d3d;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #4caf50;
+            max-height: 300px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .code-line {
+            line-height: 1.5;
+            margin-bottom: 2px;
+        }
+        
+        .indent-1 { padding-left: 20px; }
+        .indent-2 { padding-left: 40px; }
+        .indent-3 { padding-left: 60px; }
+        
+        .empty-canvas {
+            text-align: center;
+            color: #666;
+            padding: 40px 20px;
+        }
+        
+        .empty-canvas p {
+            margin: 10px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .blocks-panel {
+                width: 100%;
+                max-height: 150px;
+                border-right: none;
+                border-bottom: 1px solid #3d3d3d;
+            }
+            
+            .code-output {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid #3d3d3d;
+                max-height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔨 Block Code Editor</h1>
+        <div class="header-buttons">
+            <a href="index.html" class="btn btn-home">🏠 Home</a>
+            <button class="btn btn-save" id="saveBtn">💾 Save</button>
+            <button class="btn btn-export" id="exportBtn">📥 Export</button>
+            <button class="btn btn-clear" id="clearBtn">🗑️ Clear All</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Blocks Panel -->
+        <div class="blocks-panel">
+            <div class="blocks-title">Events</div>
+            <button class="block-btn" draggable="true" data-type="event" data-label="On Game Start">On Game Start</button>
+            <button class="block-btn" draggable="true" data-type="event" data-label="On Player Join">On Player Join</button>
+            <button class="block-btn" draggable="true" data-type="event" data-label="On Block Break">On Block Break</button>
+            
+            <div class="blocks-title">Control</div>
+            <button class="block-btn" draggable="true" data-type="control" data-label="If Condition">If Condition</button>
+            <button class="block-btn" draggable="true" data-type="control" data-label="Repeat Loop">Repeat 10 Times</button>
+            <button class="block-btn" draggable="true" data-type="control" data-label="While Loop">While Condition</button>
+            
+            <div class="blocks-title">Actions</div>
+            <button class="block-btn" draggable="true" data-type="action" data-label="Give Item">Give Item to Player</button>
+            <button class="block-btn" draggable="true" data-type="action" data-label="Set Block">Set Block at Position</button>
+            <button class="block-btn" draggable="true" data-type="action" data-label="Execute Command">Execute Command</button>
+            <button class="block-btn" draggable="true" data-type="action" data-label="Send Message">Send Message to Player</button>
+            <button class="block-btn" draggable="true" data-type="action" data-label="Play Sound">Play Sound Effect</button>
+            
+            <div class="blocks-title">Variables</div>
+            <button class="block-btn" draggable="true" data-type="variable" data-label="Set Variable">Set Variable</button>
+            <button class="block-btn" draggable="true" data-type="variable" data-label="Change Variable">Change Variable by</button>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area" id="canvas">
+            <div class="empty-canvas">
+                <p>📦 Drag blocks here to create your script</p>
+                <p style="font-size: 0.9em; color: #555;">Your blocks will appear here</p>
+            </div>
+        </div>
+
+        <!-- Code Output -->
+        <div class="code-output">
+            <div class="code-output-title">Generated Code</div>
+            <div class="code-preview" id="codePreview">
+                <div class="code-line">// Your code will appear here</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BlockEditor = {
+            blocks: [],
+            blockIdCounter: 0,
+
+            init() {
+                this.setupDragAndDrop();
+                this.setupButtonListeners();
+                this.loadFromStorage();
+                this.render();
+            },
+
+            setupDragAndDrop() {
+                const blockButtons = document.querySelectorAll('.block-btn');
+                const canvas = document.getElementById('canvas');
+
+                blockButtons.forEach(btn => {
+                    btn.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.effectAllowed = 'copy';
+                        e.dataTransfer.setData('blockData', JSON.stringify({
+                            type: btn.dataset.type,
+                            label: btn.dataset.label
+                        }));
+                    });
+                });
+
+                canvas.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    canvas.style.borderColor = '#667eea';
+                });
+
+                canvas.addEventListener('dragleave', (e) => {
+                    if (e.target === canvas) {
+                        canvas.style.borderColor = '#555';
+                    }
+                });
+
+                canvas.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    canvas.style.borderColor = '#555';
+                    
+                    try {
+                        const blockData = JSON.parse(e.dataTransfer.getData('blockData'));
+                        this.addBlock(blockData);
+                    } catch (err) {
+                        console.error('Error adding block:', err);
+                    }
+                });
+            },
+
+            setupButtonListeners() {
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveToStorage());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportCode());
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    if (confirm('Clear all blocks?')) {
+                        this.blocks = [];
+                        this.saveToStorage();
+                        this.render();
+                    }
+                });
+            },
+
+            addBlock(blockData) {
+                const block = {
+                    id: this.blockIdCounter++,
+                    type: blockData.type,
+                    label: blockData.label,
+                    param: '',
+                    indentLevel: 0
+                };
+                this.blocks.push(block);
+                this.saveToStorage();
+                this.render();
+            },
+
+            removeBlock(id) {
+                this.blocks = this.blocks.filter(b => b.id !== id);
+                this.saveToStorage();
+                this.render();
+            },
+
+            saveToStorage() {
+                localStorage.setItem('mcpackBlocks', JSON.stringify(this.blocks));
+                localStorage.setItem('blockCounter', this.blockIdCounter);
+                alert('✅ Saved!');
+            },
+
+            loadFromStorage() {
+                const stored = localStorage.getItem('mcpackBlocks');
+                const counter = localStorage.getItem('blockCounter');
+                if (stored) {
+                    this.blocks = JSON.parse(stored);
+                    this.blockIdCounter = parseInt(counter) || this.blocks.length;
+                }
+            },
+
+            generateCode() {
+                let code = [];
+                code.push('// MCPACK Generated Code');
+                code.push('// Generated: ' + new Date().toLocaleString());
+                code.push('');
+                
+                this.blocks.forEach((block, index) => {
+                    const indent = '  '.repeat(block.indentLevel);
+                    
+                    switch (block.type) {
+                        case 'event':
+                            code.push(`${indent}@event ${block.label.toLowerCase().replace(/\s+/g, '_')} {`);
+                            break;
+                        case 'control':
+                            if (block.label.includes('If')) {
+                                code.push(`${indent}if (condition) {`);
+                            } else if (block.label.includes('Repeat')) {
+                                code.push(`${indent}for (let i = 0; i < 10; i++) {`);
+                            } else if (block.label.includes('While')) {
+                                code.push(`${indent}while (condition) {`);
+                            }
+                            break;
+                        case 'action':
+                            code.push(`${indent}// ${block.label}`);
+                            break;
+                        case 'variable':
+                            code.push(`${indent}// ${block.label}`);
+                            break;
+                    }
+                });
+                
+                // Close all open blocks
+                this.blocks.forEach((block) => {
+                    if (block.type === 'event' || block.type === 'control') {
+                        const indent = '  '.repeat(block.indentLevel);
+                        code.push(`${indent}}`);
+                    }
+                });
+                
+                return code;
+            },
+
+            exportCode() {
+                const code = this.generateCode();
+                const codeText = code.join('\n');
+                
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(codeText));
+                element.setAttribute('download', 'mcpack_script.js');
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
+                
+                alert('✅ Code exported as mcpack_script.js');
+            },
+
+            render() {
+                const canvas = document.getElementById('canvas');
+                const codePreview = document.getElementById('codePreview');
+
+                // Render canvas
+                if (this.blocks.length === 0) {
+                    canvas.innerHTML = `
+                        <div class="empty-canvas">
+                            <p>📦 Drag blocks here to create your script</p>
+                            <p style="font-size: 0.9em; color: #555;">Your blocks will appear here</p>
+                        </div>
+                    `;
+                } else {
+                    canvas.innerHTML = this.blocks.map(block => `
+                        <div class="code-block ${block.type}-block">
+                            <div class="block-content">
+                                <div class="block-title">${block.label}</div>
+                                ${block.param ? `<div class="block-param">Param: ${block.param}</div>` : ''}
+                            </div>
+                            <button class="remove-btn" data-id="${block.id}">Remove</button>
+                        </div>
+                    `).join('');
+
+                    document.querySelectorAll('.remove-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            this.removeBlock(parseInt(btn.dataset.id));
+                        });
+                    });
+                }
+
+                // Render code preview
+                const codeLines = this.generateCode().map((line, index) => 
+                    `<div class="code-line">${this.escapeHtml(line)}</div>`
+                ).join('');
+                codePreview.innerHTML = codeLines || '<div class="code-line">// No code generated</div>';
+            },
+
+            escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            BlockEditor.init();
+        });
+    </script>
+</body>
+</html>
