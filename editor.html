@@ -71,6 +71,24 @@
             background: #0b7dda;
         }
         
+        .btn-preview {
+            background: #9c27b0;
+            color: white;
+        }
+        
+        .btn-preview:hover {
+            background: #7b1fa2;
+        }
+        
+        .btn-run {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-run:hover {
+            background: #45a049;
+        }
+        
         .btn-clear {
             background: #ff6b6b;
             color: white;
@@ -213,7 +231,7 @@
         .blocks-container {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 8px;
             width: 100%;
         }
         
@@ -268,6 +286,21 @@
         .code-block.variable-block {
             background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
             border-left: 5px solid #4a148c;
+        }
+        
+        .code-block.executing {
+            animation: pulse 0.6s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
+            }
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 8px 20px rgba(255, 255, 255, 0.6);
+            }
         }
         
         .block-label {
@@ -351,6 +384,48 @@
         
         .code-line {
             margin-bottom: 2px;
+        }
+        
+        .execution-log {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #4caf50;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .execution-log-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 4px;
+            border-left: 2px solid #667eea;
+            padding-left: 10px;
+        }
+        
+        .log-entry.success {
+            color: #4caf50;
+            border-left-color: #4caf50;
+        }
+        
+        .log-entry.warning {
+            color: #ff9800;
+            border-left-color: #ff9800;
+        }
+        
+        .log-entry.error {
+            color: #ff6b6b;
+            border-left-color: #ff6b6b;
         }
         
         /* Modal Styles */
@@ -482,6 +557,8 @@
         <h1>🔨 Block Code Editor</h1>
         <div class="header-buttons">
             <a href="index.html" class="btn btn-home">🏠 Home</a>
+            <button class="btn btn-run" id="runBtn">▶️ Run</button>
+            <button class="btn btn-preview" id="previewBtn">👁️ Preview</button>
             <button class="btn btn-export" id="exportBtn">📥 Export</button>
             <button class="btn btn-clear" id="clearBtn">🗑️ Clear All</button>
         </div>
@@ -497,6 +574,19 @@
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
                 <button class="modal-btn modal-btn-save" id="modalSave">Add Block</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-title">Code Preview</div>
+            <div class="code-preview" id="previewCode">
+                <div class="code-line">// Loading...</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="previewClose">Close</button>
             </div>
         </div>
     </div>
@@ -543,6 +633,10 @@
             <div class="code-output-title">📝 Generated Code</div>
             <div class="code-preview" id="codePreview">
                 <div class="code-line">// Your code will appear here</div>
+            </div>
+            <div class="execution-log-title">⚙️ Execution Log</div>
+            <div class="execution-log" id="executionLog">
+                <div class="log-entry">Ready to run...</div>
             </div>
         </div>
     </div>
@@ -631,6 +725,8 @@
             draggedBlock: null,
             draggedIndex: null,
             currentBlockData: null,
+            executionLog: [],
+            isRunning: false,
 
             init() {
                 this.setupDragAndDrop();
@@ -685,6 +781,16 @@
                         this.closeModal();
                     }
                 });
+
+                document.getElementById('previewClose').addEventListener('click', () => {
+                    document.getElementById('previewModal').classList.remove('show');
+                });
+
+                document.getElementById('previewModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'previewModal') {
+                        document.getElementById('previewModal').classList.remove('show');
+                    }
+                });
             },
 
             showBlockOptions(blockData) {
@@ -735,7 +841,19 @@
                     });
                 }
 
-                this.addBlock(this.currentBlockData, blockOptions);
+                if (this.blockToEdit !== null) {
+                    const block = this.blocks.find(b => b.id === this.blockToEdit);
+                    if (block) {
+                        block.options = blockOptions;
+                        this.blockToEdit = null;
+                        document.getElementById('modalSave').textContent = 'Add Block';
+                    }
+                } else {
+                    this.addBlock(this.currentBlockData, blockOptions);
+                }
+                
+                this.saveToStorage();
+                this.render();
                 this.closeModal();
             },
 
@@ -753,6 +871,8 @@
                         this.render();
                     }
                 });
+                document.getElementById('previewBtn').addEventListener('click', () => this.showPreview());
+                document.getElementById('runBtn').addEventListener('click', () => this.runBlocks());
             },
 
             setupBlockDragAndDrop(blockElements) {
@@ -837,35 +957,6 @@
                 }
             },
 
-            saveBlockWithOptions() {
-                const options = BLOCK_OPTIONS[this.currentBlockData.label];
-                const blockOptions = {};
-
-                if (options && options.options.length > 0) {
-                    options.options.forEach(opt => {
-                        const element = document.querySelector(`[data-key="${opt.key}"]`);
-                        if (element) {
-                            blockOptions[opt.key] = element.value;
-                        }
-                    });
-                }
-
-                if (this.blockToEdit !== null) {
-                    const block = this.blocks.find(b => b.id === this.blockToEdit);
-                    if (block) {
-                        block.options = blockOptions;
-                        this.blockToEdit = null;
-                        document.getElementById('modalSave').textContent = 'Add Block';
-                    }
-                } else {
-                    this.addBlock(this.currentBlockData, blockOptions);
-                }
-                
-                this.saveToStorage();
-                this.render();
-                this.closeModal();
-            },
-
             blockToEdit: null,
 
             saveToStorage() {
@@ -892,6 +983,117 @@
                     this.blocks = JSON.parse(stored);
                     this.blockIdCounter = parseInt(counter) || this.blocks.length;
                 }
+            },
+
+            addLog(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                this.executionLog.push({ message, type, timestamp });
+                this.updateExecutionLog();
+            },
+
+            updateExecutionLog() {
+                const logElement = document.getElementById('executionLog');
+                logElement.innerHTML = this.executionLog.slice(-15).map(log => 
+                    `<div class="log-entry ${log.type}">[${log.timestamp}] ${log.message}</div>`
+                ).join('');
+                logElement.scrollTop = logElement.scrollHeight;
+            },
+
+            async runBlocks() {
+                if (this.isRunning) return;
+                if (this.blocks.length === 0) {
+                    this.addLog('No blocks to run!', 'warning');
+                    return;
+                }
+
+                this.isRunning = true;
+                this.executionLog = [];
+                this.addLog('Starting execution...', 'success');
+
+                try {
+                    // Run all event blocks in parallel
+                    const eventBlocks = this.blocks.filter(b => b.type === 'event');
+                    const actionBlocks = this.blocks.filter(b => b.type !== 'event');
+
+                    if (eventBlocks.length > 0) {
+                        await Promise.all(eventBlocks.map(block => this.executeBlock(block)));
+                    }
+
+                    // Execute action blocks sequentially
+                    for (const block of actionBlocks) {
+                        await this.executeBlock(block);
+                    }
+
+                    this.addLog('Execution complete!', 'success');
+                } catch (error) {
+                    this.addLog(`Error: ${error.message}`, 'error');
+                } finally {
+                    this.isRunning = false;
+                    this.render();
+                }
+            },
+
+            async executeBlock(block) {
+                const blockElements = document.querySelectorAll(`[data-id="${block.id}"]`);
+                blockElements.forEach(el => el.classList.add('executing'));
+
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    switch (block.label) {
+                        case 'Give Item':
+                            this.addLog(`Gave ${block.options.itemType} x${block.options.amount}`, 'success');
+                            break;
+                        case 'Set Block':
+                            this.addLog(`Set ${block.options.blockType} at (${block.options.x}, ${block.options.y}, ${block.options.z})`, 'success');
+                            break;
+                        case 'Execute Command':
+                            this.addLog(`Executed: ${block.options.command}`, 'success');
+                            break;
+                        case 'Send Message':
+                            this.addLog(`Message: ${block.options.message}`, 'success');
+                            break;
+                        case 'Play Sound':
+                            this.addLog(`Playing ${block.options.sound} at vol ${block.options.volume}, pitch ${block.options.pitch}`, 'success');
+                            break;
+                        case 'Summon Entity':
+                            this.addLog(`Summoned ${block.options.entity} x${block.options.amount}`, 'success');
+                            break;
+                        case 'Deal Damage':
+                            this.addLog(`Dealt ${block.options.damage} ${block.options.type} damage`, 'success');
+                            break;
+                        case 'Apply Effect':
+                            this.addLog(`Applied ${block.options.effect} for ${block.options.duration}s (Amp: ${block.options.amplifier})`, 'success');
+                            break;
+                        case 'Set Variable':
+                            this.addLog(`Set ${block.options.varName} = ${block.options.varValue}`, 'success');
+                            break;
+                        case 'Change Variable':
+                            this.addLog(`Changed ${block.options.varName} by ${block.options.varChange}`, 'success');
+                            break;
+                        case 'On Game Start':
+                            this.addLog('Game started', 'success');
+                            break;
+                        case 'On Player Join':
+                            this.addLog('Player joined', 'success');
+                            break;
+                        default:
+                            this.addLog(`Executed: ${block.label}`, 'success');
+                    }
+                } catch (error) {
+                    this.addLog(`Failed: ${block.label}`, 'error');
+                } finally {
+                    blockElements.forEach(el => el.classList.remove('executing'));
+                }
+            },
+
+            showPreview() {
+                const code = this.generateCode();
+                const previewCode = document.getElementById('previewCode');
+                previewCode.innerHTML = code.map((line) => 
+                    `<div class="code-line">${this.escapeHtml(line)}</div>`
+                ).join('');
+                document.getElementById('previewModal').classList.add('show');
             },
 
             generateCode() {
