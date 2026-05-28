@@ -62,13 +62,13 @@
             color: #667eea;
         }
         
-        .btn-save {
-            background: #4caf50;
+        .btn-export {
+            background: #2196f3;
             color: white;
         }
         
-        .btn-save:hover {
-            background: #45a049;
+        .btn-export:hover {
+            background: #0b7dda;
         }
         
         .btn-clear {
@@ -78,15 +78,6 @@
         
         .btn-clear:hover {
             background: #ff5252;
-        }
-        
-        .btn-export {
-            background: #2196f3;
-            color: white;
-        }
-        
-        .btn-export:hover {
-            background: #0b7dda;
         }
         
         .save-indicator {
@@ -219,12 +210,6 @@
             border: 2px solid #333;
         }
         
-        .canvas-label {
-            color: #666;
-            font-size: 1em;
-            margin-bottom: 20px;
-        }
-        
         .blocks-container {
             display: flex;
             flex-direction: column;
@@ -236,7 +221,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 6px;
             padding: 15px 20px;
-            min-width: 200px;
+            min-width: 250px;
             cursor: grab;
             user-select: none;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
@@ -290,12 +275,18 @@
             font-size: 0.95em;
         }
         
-        .remove-btn {
+        .block-param {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-left: 8px;
+        }
+        
+        .edit-btn, .remove-btn {
             background: rgba(255, 255, 255, 0.3);
             border: none;
             color: white;
             cursor: pointer;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 4px;
             font-size: 0.85em;
             transition: all 0.2s;
@@ -305,6 +296,10 @@
         .remove-btn:hover {
             background: #ff6b6b;
             transform: scale(1.1);
+        }
+        
+        .edit-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
         
         .empty-canvas {
@@ -358,6 +353,103 @@
             margin-bottom: 2px;
         }
         
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 300;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+            overflow-y: auto;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .option-group {
+            margin-bottom: 20px;
+        }
+        
+        .option-label {
+            color: #e0e0e0;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.95em;
+        }
+        
+        .option-select, .option-input {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 0.95em;
+        }
+        
+        .option-select:focus, .option-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-save {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .modal-btn-save:hover {
+            background: #45a049;
+        }
+        
+        .modal-btn-cancel {
+            background: #666;
+            color: white;
+        }
+        
+        .modal-btn-cancel:hover {
+            background: #555;
+        }
+        
         @media (max-width: 1024px) {
             .code-output {
                 width: 250px;
@@ -397,6 +489,18 @@
 
     <div class="save-indicator" id="saveIndicator">💾 Saved!</div>
 
+    <!-- Block Options Modal -->
+    <div class="modal" id="optionsModal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">Block Options</div>
+            <div id="optionsContainer"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-save" id="modalSave">Add Block</button>
+            </div>
+        </div>
+    </div>
+
     <div class="main-container">
         <!-- Blocks Panel (Left) -->
         <div class="blocks-panel">
@@ -404,22 +508,26 @@
             <button class="block-btn event-color" draggable="true" data-type="event" data-label="On Game Start">On Game Start</button>
             <button class="block-btn event-color" draggable="true" data-type="event" data-label="On Player Join">On Player Join</button>
             <button class="block-btn event-color" draggable="true" data-type="event" data-label="On Block Break">On Block Break</button>
+            <button class="block-btn event-color" draggable="true" data-type="event" data-label="On Player Death">On Player Death</button>
             
             <div class="blocks-title">🔀 Control</div>
             <button class="block-btn if-color" draggable="true" data-type="control" data-label="If Condition">If Condition</button>
-            <button class="block-btn loop-color" draggable="true" data-type="control" data-label="Repeat 10 Times">Repeat 10 Times</button>
+            <button class="block-btn loop-color" draggable="true" data-type="control" data-label="Repeat Loop">Repeat Loop</button>
             <button class="block-btn loop-color" draggable="true" data-type="control" data-label="While Loop">While Condition</button>
             
             <div class="blocks-title">⚡ Actions</div>
-            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Give Item">Give Item to Player</button>
-            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Set Block">Set Block at Position</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Give Item">Give Item</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Set Block">Set Block</button>
             <button class="block-btn action-color" draggable="true" data-type="action" data-label="Execute Command">Execute Command</button>
-            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Send Message">Send Message to Player</button>
-            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Play Sound">Play Sound Effect</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Send Message">Send Message</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Play Sound">Play Sound</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Summon Entity">Summon Entity</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Deal Damage">Deal Damage</button>
+            <button class="block-btn action-color" draggable="true" data-type="action" data-label="Apply Effect">Apply Effect</button>
             
             <div class="blocks-title">📦 Variables</div>
             <button class="block-btn variable-color" draggable="true" data-type="variable" data-label="Set Variable">Set Variable</button>
-            <button class="block-btn variable-color" draggable="true" data-type="variable" data-label="Change Variable">Change Variable by</button>
+            <button class="block-btn variable-color" draggable="true" data-type="variable" data-label="Change Variable">Change Variable</button>
         </div>
 
         <!-- Canvas Area (Center) -->
@@ -440,15 +548,94 @@
     </div>
 
     <script>
+        // Block option templates
+        const BLOCK_OPTIONS = {
+            'Give Item': {
+                options: [
+                    { label: 'Item Type', key: 'itemType', type: 'select', values: ['Diamond', 'Gold', 'Iron', 'Emerald', 'Apple', 'Bread', 'Sword', 'Pickaxe', 'Axe'] },
+                    { label: 'Amount', key: 'amount', type: 'input', placeholder: '1' }
+                ]
+            },
+            'Set Block': {
+                options: [
+                    { label: 'Block Type', key: 'blockType', type: 'select', values: ['Stone', 'Dirt', 'Grass', 'Gold Ore', 'Iron Ore', 'Diamond Ore', 'Wood', 'Leaves', 'Water', 'Lava'] },
+                    { label: 'X Offset', key: 'x', type: 'input', placeholder: '0' },
+                    { label: 'Y Offset', key: 'y', type: 'input', placeholder: '0' },
+                    { label: 'Z Offset', key: 'z', type: 'input', placeholder: '0' }
+                ]
+            },
+            'Execute Command': {
+                options: [
+                    { label: 'Command', key: 'command', type: 'input', placeholder: 'e.g., /give @s diamond' }
+                ]
+            },
+            'Send Message': {
+                options: [
+                    { label: 'Message', key: 'message', type: 'input', placeholder: 'Enter message...' }
+                ]
+            },
+            'Play Sound': {
+                options: [
+                    { label: 'Sound', key: 'sound', type: 'select', values: ['Block Break', 'Block Place', 'Explosion', 'Ding', 'Ambient Cave', 'Bell', 'Arrow Hit', 'Zombie', 'Creeper'] },
+                    { label: 'Volume', key: 'volume', type: 'input', placeholder: '1.0' },
+                    { label: 'Pitch', key: 'pitch', type: 'input', placeholder: '1.0' }
+                ]
+            },
+            'Summon Entity': {
+                options: [
+                    { label: 'Entity Type', key: 'entity', type: 'select', values: ['Zombie', 'Skeleton', 'Creeper', 'Cow', 'Pig', 'Sheep', 'Chicken', 'Horse', 'Villager', 'Enderman'] },
+                    { label: 'Amount', key: 'amount', type: 'input', placeholder: '1' }
+                ]
+            },
+            'Deal Damage': {
+                options: [
+                    { label: 'Damage Amount', key: 'damage', type: 'input', placeholder: '1.0' },
+                    { label: 'Damage Type', key: 'type', type: 'select', values: ['Normal', 'Fire', 'Poison', 'Wither'] }
+                ]
+            },
+            'Apply Effect': {
+                options: [
+                    { label: 'Effect Type', key: 'effect', type: 'select', values: ['Speed', 'Slowness', 'Haste', 'Mining Fatigue', 'Strength', 'Instant Health', 'Instant Damage', 'Jump Boost', 'Nausea', 'Regeneration', 'Resistance', 'Fire Resistance', 'Water Breathing', 'Invisibility', 'Blindness', 'Night Vision', 'Hunger', 'Weakness', 'Poison', 'Wither', 'Health Boost', 'Absorption', 'Saturation'] },
+                    { label: 'Duration (seconds)', key: 'duration', type: 'input', placeholder: '30' },
+                    { label: 'Amplifier', key: 'amplifier', type: 'input', placeholder: '0' }
+                ]
+            },
+            'Set Variable': {
+                options: [
+                    { label: 'Variable Name', key: 'varName', type: 'input', placeholder: 'my_variable' },
+                    { label: 'Value', key: 'varValue', type: 'input', placeholder: '0' }
+                ]
+            },
+            'Change Variable': {
+                options: [
+                    { label: 'Variable Name', key: 'varName', type: 'input', placeholder: 'my_variable' },
+                    { label: 'Change By', key: 'varChange', type: 'input', placeholder: '1' }
+                ]
+            },
+            'If Condition': {
+                options: [
+                    { label: 'Condition Type', key: 'condition', type: 'select', values: ['Player Health > Value', 'Player Health < Value', 'Variable = Value', 'Variable > Value', 'Variable < Value'] },
+                    { label: 'Value', key: 'conditionValue', type: 'input', placeholder: '10' }
+                ]
+            },
+            'Repeat Loop': {
+                options: [
+                    { label: 'Number of Times', key: 'times', type: 'input', placeholder: '10' }
+                ]
+            }
+        };
+
         const BlockEditor = {
             blocks: [],
             blockIdCounter: 0,
             draggedBlock: null,
             draggedIndex: null,
+            currentBlockData: null,
 
             init() {
                 this.setupDragAndDrop();
                 this.setupButtonListeners();
+                this.setupModalListeners();
                 this.loadFromStorage();
                 this.render();
             },
@@ -477,9 +664,93 @@
                     
                     try {
                         const blockData = JSON.parse(e.dataTransfer.getData('blockData'));
-                        this.addBlock(blockData);
+                        this.showBlockOptions(blockData);
                     } catch (err) {
                         console.error('Error adding block:', err);
+                    }
+                });
+            },
+
+            setupModalListeners() {
+                document.getElementById('modalCancel').addEventListener('click', () => {
+                    this.closeModal();
+                });
+
+                document.getElementById('modalSave').addEventListener('click', () => {
+                    this.saveBlockWithOptions();
+                });
+
+                document.getElementById('optionsModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'optionsModal') {
+                        this.closeModal();
+                    }
+                });
+            },
+
+            showBlockOptions(blockData) {
+                this.currentBlockData = blockData;
+                const options = BLOCK_OPTIONS[blockData.label];
+                const optionsContainer = document.getElementById('optionsContainer');
+                const modal = document.getElementById('optionsModal');
+
+                document.getElementById('modalTitle').textContent = `Options: ${blockData.label}`;
+
+                if (options && options.options.length > 0) {
+                    optionsContainer.innerHTML = options.options.map((opt, idx) => {
+                        if (opt.type === 'select') {
+                            return `
+                                <div class="option-group">
+                                    <label class="option-label">${opt.label}</label>
+                                    <select class="option-select" data-key="${opt.key}">
+                                        ${opt.values.map(v => `<option value="${v}">${v}</option>`).join('')}
+                                    </select>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="option-group">
+                                    <label class="option-label">${opt.label}</label>
+                                    <input type="text" class="option-input" data-key="${opt.key}" placeholder="${opt.placeholder || ''}">
+                                </div>
+                            `;
+                        }
+                    }).join('');
+                } else {
+                    optionsContainer.innerHTML = '<p style="color: #999;">No options for this block</p>';
+                }
+
+                modal.classList.add('show');
+            },
+
+            saveBlockWithOptions() {
+                const options = BLOCK_OPTIONS[this.currentBlockData.label];
+                const blockOptions = {};
+
+                if (options && options.options.length > 0) {
+                    options.options.forEach(opt => {
+                        const element = document.querySelector(`[data-key="${opt.key}"]`);
+                        if (element) {
+                            blockOptions[opt.key] = element.value;
+                        }
+                    });
+                }
+
+                this.addBlock(this.currentBlockData, blockOptions);
+                this.closeModal();
+            },
+
+            closeModal() {
+                document.getElementById('optionsModal').classList.remove('show');
+                this.currentBlockData = null;
+            },
+
+            setupButtonListeners() {
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportCode());
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    if (confirm('Clear all blocks?')) {
+                        this.blocks = [];
+                        this.saveToStorage();
+                        this.render();
                     }
                 });
             },
@@ -528,23 +799,12 @@
                 });
             },
 
-            setupButtonListeners() {
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportCode());
-                document.getElementById('clearBtn').addEventListener('click', () => {
-                    if (confirm('Clear all blocks?')) {
-                        this.blocks = [];
-                        this.saveToStorage();
-                        this.render();
-                    }
-                });
-            },
-
-            addBlock(blockData) {
+            addBlock(blockData, blockOptions = {}) {
                 const block = {
                     id: this.blockIdCounter++,
                     type: blockData.type,
                     label: blockData.label,
-                    param: '',
+                    options: blockOptions,
                     indentLevel: 0
                 };
                 this.blocks.push(block);
@@ -557,6 +817,56 @@
                 this.saveToStorage();
                 this.render();
             },
+
+            editBlock(id) {
+                const block = this.blocks.find(b => b.id === id);
+                if (block) {
+                    this.currentBlockData = { type: block.type, label: block.label };
+                    this.showBlockOptions(this.currentBlockData);
+                    const options = BLOCK_OPTIONS[block.label];
+                    if (options) {
+                        options.options.forEach(opt => {
+                            const element = document.querySelector(`[data-key="${opt.key}"]`);
+                            if (element && block.options[opt.key]) {
+                                element.value = block.options[opt.key];
+                            }
+                        });
+                    }
+                    document.getElementById('modalSave').textContent = 'Update Block';
+                    this.blockToEdit = id;
+                }
+            },
+
+            saveBlockWithOptions() {
+                const options = BLOCK_OPTIONS[this.currentBlockData.label];
+                const blockOptions = {};
+
+                if (options && options.options.length > 0) {
+                    options.options.forEach(opt => {
+                        const element = document.querySelector(`[data-key="${opt.key}"]`);
+                        if (element) {
+                            blockOptions[opt.key] = element.value;
+                        }
+                    });
+                }
+
+                if (this.blockToEdit !== null) {
+                    const block = this.blocks.find(b => b.id === this.blockToEdit);
+                    if (block) {
+                        block.options = blockOptions;
+                        this.blockToEdit = null;
+                        document.getElementById('modalSave').textContent = 'Add Block';
+                    }
+                } else {
+                    this.addBlock(this.currentBlockData, blockOptions);
+                }
+                
+                this.saveToStorage();
+                this.render();
+                this.closeModal();
+            },
+
+            blockToEdit: null,
 
             saveToStorage() {
                 localStorage.setItem('mcpackBlocks', JSON.stringify(this.blocks));
@@ -590,29 +900,35 @@
                 code.push('// Generated: ' + new Date().toLocaleString());
                 code.push('');
                 
-                this.blocks.forEach((block, index) => {
+                this.blocks.forEach((block) => {
                     const indent = '  '.repeat(block.indentLevel);
-                    
+                    let line = `${indent}`;
+
                     switch (block.type) {
                         case 'event':
-                            code.push(`${indent}@event ${block.label.toLowerCase().replace(/\s+/g, '_')} {`);
+                            line += `@event ${block.label.toLowerCase().replace(/\s+/g, '_')} {`;
+                            break;
+                        case 'action':
+                            line += `// ${block.label}`;
+                            if (Object.keys(block.options).length > 0) {
+                                line += `: ${JSON.stringify(block.options)}`;
+                            }
                             break;
                         case 'control':
                             if (block.label.includes('If')) {
-                                code.push(`${indent}if (condition) {`);
+                                line += `if (${block.options.condition || 'condition'}) {`;
                             } else if (block.label.includes('Repeat')) {
-                                code.push(`${indent}for (let i = 0; i < 10; i++) {`);
+                                line += `for (let i = 0; i < ${block.options.times || 10}; i++) {`;
                             } else if (block.label.includes('While')) {
-                                code.push(`${indent}while (condition) {`);
+                                line += `while (${block.options.condition || 'condition'}) {`;
                             }
                             break;
-                        case 'action':
-                            code.push(`${indent}// ${block.label}`);
-                            break;
                         case 'variable':
-                            code.push(`${indent}// ${block.label}`);
+                            line += `// ${block.label}: ${JSON.stringify(block.options)}`;
                             break;
                     }
+
+                    code.push(line);
                 });
                 
                 this.blocks.forEach((block) => {
@@ -636,8 +952,19 @@
                 document.body.appendChild(element);
                 element.click();
                 document.body.removeChild(element);
-                
+
                 this.showSaveIndicator();
+            },
+
+            formatBlockDisplay(block) {
+                let display = block.label;
+                if (block.options && Object.keys(block.options).length > 0) {
+                    const firstOption = Object.values(block.options)[0];
+                    if (firstOption) {
+                        display += ` (${firstOption})`;
+                    }
+                }
+                return display;
             },
 
             render() {
@@ -655,7 +982,8 @@
                     canvas.innerHTML = '<div class="blocks-container">' + 
                         this.blocks.map(block => `
                             <div class="code-block ${block.type}-block" data-id="${block.id}" draggable="true">
-                                <span class="block-label">${block.label}</span>
+                                <span class="block-label">${this.formatBlockDisplay(block)}</span>
+                                <button class="edit-btn" data-id="${block.id}">✎</button>
                                 <button class="remove-btn" data-id="${block.id}">×</button>
                             </div>
                         `).join('') + 
@@ -665,6 +993,13 @@
                         btn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             this.removeBlock(parseInt(btn.dataset.id));
+                        });
+                    });
+
+                    document.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.editBlock(parseInt(btn.dataset.id));
                         });
                     });
 
